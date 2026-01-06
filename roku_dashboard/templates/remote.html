@@ -6,6 +6,11 @@
   <div class="grid gap-6 lg:grid-cols-3">
     <section class="panel panel-pad lg:col-span-2">
       <div class="remote-shell">
+        <div class="w-full flex items-center justify-between gap-3">
+          <div class="text-xs muted2">Keyboard control</div>
+          <button class="button" id="kbdToggle" type="button">Off</button>
+        </div>
+
         <div class="remote-body">
           <div class="remote-top">
             <button class="remote-btn press-flash js-send" data-key="Home" {% if not ip %}disabled{% endif %} title="Home">
@@ -70,6 +75,30 @@
             <button class="remote-btn press-flash round js-send" data-key="VolumeUp" {% if not ip %}disabled{% endif %} title="Volume Up">
               {{ icons.icon_volume_up("remote-ic") }}
             </button>
+          </div>
+        </div>
+
+        <div class="w-full">
+          <div class="mt-4 text-xs muted2 uppercase tracking-widest">Recent Channels</div>
+          <div class="mt-3 grid gap-2" id="remoteRecent" data-ip="{{ ip or '' }}">
+            {% if recent_preview and recent_preview|length > 0 %}
+              {% for ch in recent_preview[:6] %}
+                <div class="app-card">
+                  <div class="app-icon-wrap">
+                    <img class="app-icon" src="{{ url_for('api_icon', app_id=ch.id, ip=ip) }}" alt="" loading="lazy" />
+                  </div>
+                  <div class="min-w-0">
+                    <div class="font-semibold truncate">{{ ch.name }}</div>
+                    <div class="text-xs muted font-mono truncate">{{ ch.watched_text }}</div>
+                  </div>
+                  <button class="cta js-launch" data-app-id="{{ ch.id }}" data-app-name="{{ ch.name }}" {% if not ip %}disabled{% endif %}>Launch</button>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="muted">No recent channels yet.</div>
+              <div class="app-card skeleton"><div class="app-icon-wrap"></div><div class="skeleton-lines"></div><div></div></div>
+              <div class="app-card skeleton"><div class="app-icon-wrap"></div><div class="skeleton-lines"></div><div></div></div>
+            {% endif %}
           </div>
         </div>
       </div>

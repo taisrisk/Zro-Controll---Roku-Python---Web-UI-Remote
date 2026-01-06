@@ -46,7 +46,11 @@
         <button class="button" id="refreshUserBtn" type="button" {% if not ip %}disabled{% endif %}>Refresh</button>
       </div>
 
-      <div class="mt-3 grid gap-2" id="sessionList"></div>
+      <div class="mt-3 grid gap-2" id="sessionList">
+        <div class="kv skeleton"></div>
+        <div class="kv skeleton"></div>
+        <div class="kv skeleton"></div>
+      </div>
     </section>
 
     <aside class="panel panel-pad">
@@ -59,4 +63,3 @@
     </aside>
   </div>
 {% endblock %}
-

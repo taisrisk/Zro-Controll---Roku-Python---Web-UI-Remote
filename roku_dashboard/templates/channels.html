@@ -10,7 +10,7 @@
           <p class="mt-1 text-sm muted">
             {% if ip %}
               Device <span class="font-mono">{{ ip }}</span>
-              {% if active and active.name %} • Active: <span class="text-slate-200">{{ active.name }}</span>{% endif %}
+              {% if active and active.name %} • Active: <span class="font-semibold">{{ active.name }}</span>{% endif %}
             {% else %}
               Select a device first (LAN tab).
             {% endif %}
@@ -18,7 +18,7 @@
         </div>
 
         <div class="flex flex-wrap gap-2 items-center">
-          <input id="channelSearch" class="input w-64" placeholder="Search channels…" />
+          <input id="channelSearch" class="input w-64" placeholder="Search channels" />
           <button class="button js-refresh-channels" {% if not ip %}disabled{% endif %}>Refresh</button>
         </div>
       </div>
@@ -26,19 +26,6 @@
       {% if error %}
         <div class="mt-4 alert">{{ error }}</div>
       {% endif %}
-
-      <div id="recentStrip" class="mt-5 flex flex-wrap items-center gap-2">
-          <div class="text-xs muted2 uppercase tracking-widest">Recent</div>
-          {% if recent_channels and recent_channels|length > 0 %}
-            {% for ch in recent_channels %}
-              <button class="button js-launch" data-app-id="{{ ch.id }}" data-app-name="{{ ch.name }}" {% if not ip %}disabled{% endif %}>
-                {{ ch.name }}
-              </button>
-            {% endfor %}
-          {% else %}
-            <div class="text-sm muted">No recent channels yet.</div>
-          {% endif %}
-      </div>
 
       <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" id="channelGrid" data-ip="{{ ip or '' }}">
         {% for app in apps %}
@@ -57,3 +44,4 @@
     </section>
   </div>
 {% endblock %}
+

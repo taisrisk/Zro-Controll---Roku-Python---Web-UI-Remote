@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from functools import lru_cache
+import hashlib
 from pathlib import Path
+import time
 from uuid import uuid4
 
-from flask import Flask, Response, jsonify, render_template, request, url_for
+from flask import Flask, Response, jsonify, render_template, request, url_for, send_file
 
+from device_badge import render_device_badge_svg
 from device_store import DeviceStore
 from session_store import SessionStore
 from roku_api import Roku, RokuECPError, discover_roku
@@ -13,8 +16,12 @@ from roku_api import Roku, RokuECPError, discover_roku
 
 def create_app() -> Flask:
     app = Flask(__name__)
-    store = DeviceStore(root_dir=(Path(__file__).resolve().parent / "data"))
-    sessions = SessionStore(root_dir=(Path(__file__).resolve().parent / "data"))
+    data_root = Path(__file__).resolve().parent / "data"
+    store = DeviceStore(root_dir=data_root)
+    sessions = SessionStore(root_dir=data_root)
+    badges_dir = data_root / "badges"
+    badges_dir.mkdir(parents=True, exist_ok=True)
+    lan_cache: dict[str, object] = {"ts": 0.0, "devices": []}
 
     BROWSER_ID_COOKIE = "zrocontrol_bid"
 
@@ -40,6 +47,17 @@ def create_app() -> Flask:
     def _roku_fast(ip: str) -> Roku:
         return Roku(ip, timeout_s=1.5)
 
+    def _format_duration(sec: int) -> str:
+        sec = max(0, int(sec))
+        h = sec // 3600
+        m = (sec % 3600) // 60
+        s = sec % 60
+        if h:
+            return f"{h}h {m}m"
+        if m:
+            return f"{m}m {s}s"
+        return f"{s}s"
+
     @app.get("/")
     def index():
         return render_template("index.html")
@@ -47,8 +65,11 @@ def create_app() -> Flask:
     @app.get("/lan")
     def lan_control():
         timeout_s = float(request.args.get("timeout", "2.0"))
-        devices = discover_roku(timeout_s=timeout_s, fetch_device_info=True, info_timeout_s=1.0)
-        return render_template("lan_control.html", devices=devices, timeout_s=timeout_s)
+        now = time.time()
+        cached = lan_cache.get("devices") if (now - float(lan_cache.get("ts") or 0.0)) < 60.0 else None
+        if not cached:
+            cached = store.list_known_devices()
+        return render_template("lan_control.html", devices=cached or [], timeout_s=timeout_s)
 
     @app.get("/lan/devices")
     def lan_devices():
@@ -72,12 +93,14 @@ def create_app() -> Flask:
                     "name": (d.name or cached.get("device_name") or "Roku"),
                     "ip": d.ip,
                     "model": (d.model_name or d.model_number or cached.get("device_model") or ""),
-                    "icon_url": url_for("api_device_icon", ip=d.ip),
+                    "icon_url": url_for("api_device_badge", ip=d.ip),
                     "reachable": reachable,
                     "last_seen_ts": cached.get("last_seen_ts"),
                     "last_reachable_ts": cached.get("last_reachable_ts"),
                 }
             )
+        lan_cache["ts"] = time.time()
+        lan_cache["devices"] = result
         return jsonify(result)
 
     @app.get("/channels")
@@ -85,7 +108,6 @@ def create_app() -> Flask:
         ip = request.args.get("ip")
         apps = []
         active = None
-        recent_channels = []
         error = None
         if ip:
             try:
@@ -93,11 +115,26 @@ def create_app() -> Flask:
                 apps = roku.get_apps()
                 active = roku.get_active_app()
                 state = store.load(ip)
-                recent_channels = list(state.get("recent_channels") or [])
             except (ValueError, RokuECPError) as exc:
                 error = str(exc)
+
+        # Sort apps so most-recent launched appear first (no separate "recent" section).
+        recent = []
+        if ip:
+            try:
+                recent = list(store.load(ip).get("recent_channels") or [])
+            except Exception:
+                recent = []
+        rank: dict[str, int] = {}
+        for idx, ch in enumerate(recent):
+            if ch.get("id"):
+                rank[str(ch["id"])] = idx
+        if rank:
+            apps.sort(key=lambda a: (rank.get(str(a.get("id")), 10_000), (a.get("name") or "").lower()))
+        else:
+            apps.sort(key=lambda a: ((a.get("name") or "").lower()))
         return render_template(
-            "channels.html", ip=ip, apps=apps, active=active, recent_channels=recent_channels, error=error
+            "channels.html", ip=ip, apps=apps, active=active, error=error
         )
 
     @app.get("/remote")
@@ -105,12 +142,33 @@ def create_app() -> Flask:
         ip = request.args.get("ip")
         info = None
         error = None
+        recent_preview: list[dict[str, object]] = []
         if ip:
             try:
                 info = _roku(ip).get_device_info()
+                recent_channels = list(store.load(ip).get("recent_channels") or [])
+                watch_totals = sessions.get_app_watch_totals(ip, _get_browser_id())
+                for ch in recent_channels[:8]:
+                    cid = str(ch.get("id") or "")
+                    if not cid:
+                        continue
+                    watched_sec = int(watch_totals.get(cid) or 0)
+                    recent_preview.append(
+                        {
+                            "id": cid,
+                            "name": ch.get("name") or cid,
+                            "watched_text": _format_duration(watched_sec) if watched_sec > 0 else "not watched yet",
+                        }
+                    )
             except (ValueError, RokuECPError) as exc:
                 error = str(exc)
-        return render_template("remote.html", ip=ip, info=info, error=error)
+        return render_template(
+            "remote.html",
+            ip=ip,
+            info=info,
+            error=error,
+            recent_preview=recent_preview,
+        )
 
     @app.get("/user")
     def user_tab():
@@ -248,8 +306,36 @@ def create_app() -> Flask:
             return Response(status=404)
         return Response(content, content_type=content_type)
 
+    @app.get("/api/device-badge")
+    def api_device_badge():
+        ip = request.args.get("ip", "")
+        state = store.load(ip)
+        sig_src = f"{ip}|{state.get('device_name') or ''}|{state.get('device_model') or ''}"
+        sig = hashlib.sha256(sig_src.encode("utf-8")).hexdigest()[:16]
+        badge_path = badges_dir / f"{ip}.svg"
+        try:
+            if badge_path.exists():
+                head = badge_path.read_text(encoding="utf-8")[:120]
+                if f"sig:{sig}" in head:
+                    return send_file(badge_path, mimetype="image/svg+xml", max_age=86400)
+        except Exception:
+            pass
+
+        svg = render_device_badge_svg(
+            ip=ip,
+            device_name=state.get("device_name"),
+            model_name=state.get("device_model"),
+            model_number=None,
+        )
+        svg = f"<!-- sig:{sig} -->\n{svg}"
+        try:
+            badge_path.write_text(svg, encoding="utf-8")
+        except Exception:
+            return Response(svg, content_type="image/svg+xml", headers={"Cache-Control": "public, max-age=3600"})
+        return send_file(badge_path, mimetype="image/svg+xml", max_age=86400)
+
     return app
 
 
 if __name__ == "__main__":
-    create_app().run(host="127.0.0.1", port=5000, debug=True)
+    create_app().run(host="0.0.0.0", port=9191, debug=False, use_reloader=False)

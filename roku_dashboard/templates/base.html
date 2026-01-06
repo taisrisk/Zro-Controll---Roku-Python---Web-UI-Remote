@@ -15,6 +15,13 @@
       {% block content %}{% endblock %}
     </main>
 
+    <div id="pageLoader" class="page-loader hidden" aria-hidden="true">
+      <div class="page-loader-card skeleton">
+        <div class="page-loader-line"></div>
+        <div class="page-loader-line short"></div>
+      </div>
+    </div>
+
     <nav class="bottom-nav" aria-label="Tabs">
       <div class="bottom-nav-inner">
         <a class="tab {% if request.endpoint == 'lan_control' %}is-active{% endif %}" href="{{ url_for('lan_control') }}">

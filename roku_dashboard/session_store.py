@@ -195,3 +195,20 @@ class SessionStore:
             "updated_ts": user.get("updated_ts"),
         }
 
+    def get_app_watch_totals(self, ip: str, browser_id: str) -> dict[str, int]:
+        view = self.get_user_view(ip, browser_id)
+        totals: dict[str, int] = {}
+        for s in t.cast(list[dict[str, t.Any]], view.get("sessions") or []):
+            cid = s.get("channel_id")
+            if not cid:
+                continue
+            totals[str(cid)] = totals.get(str(cid), 0) + int(s.get("duration_sec") or 0)
+        current = t.cast(t.Optional[dict[str, t.Any]], view.get("current"))
+        if current and current.get("channel_id") and current.get("start_time"):
+            cid = str(current.get("channel_id"))
+            try:
+                start_ts = _parse_iso(t.cast(str, current.get("start_time")))
+                totals[cid] = totals.get(cid, 0) + max(0, int(_now_ts() - start_ts))
+            except Exception:
+                pass
+        return totals

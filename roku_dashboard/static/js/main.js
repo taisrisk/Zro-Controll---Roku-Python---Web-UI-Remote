@@ -26,7 +26,7 @@ function showToast(message, kind = "info") {
   toast.textContent = message;
   toast.classList.remove("hidden");
   toast.style.borderColor =
-    kind === "error" ? "rgba(255,120,150,0.28)" : "rgba(255,255,255,0.12)";
+    kind === "error" ? "rgba(255,65,104,0.35)" : "rgba(255,255,255,0.10)";
   window.clearTimeout(showToast._t);
   showToast._t = window.setTimeout(() => toast.classList.add("hidden"), 1800);
 }
@@ -44,6 +44,11 @@ function escapeHtml(s) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function cssEscape(s) {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") return CSS.escape(s);
+  return String(s).replace(/"/g, '\\"');
 }
 
 async function postOk(url, body) {
@@ -71,12 +76,26 @@ function wireNavIpLinks() {
   });
 }
 
+function wirePageLoader() {
+  const loader = qs("#pageLoader");
+  if (!loader) return;
+
+  const show = () => loader.classList.remove("hidden");
+  const hide = () => loader.classList.add("hidden");
+
+  qsa("a.tab").forEach((a) => {
+    a.addEventListener("click", () => show());
+  });
+
+  window.addEventListener("pageshow", () => hide());
+}
+
 function wireDeviceSelect() {
   qsa(".js-select-device").forEach((btn) => {
     if (btn.dataset.wired === "1") return;
     btn.dataset.wired = "1";
     btn.addEventListener("click", () => {
-      const ip = btn.dataset.ip || "";
+      const ip = (btn.dataset.ip || "").trim();
       if (!ip) return;
       setActiveIp(ip);
       showToast(`Selected ${ip}`);
@@ -131,7 +150,7 @@ async function gateControlsByReachability() {
     } else {
       setControlsDisabled(false);
     }
-  } catch (err) {
+  } catch {
     setControlsDisabled(true);
   }
 }
@@ -145,9 +164,9 @@ function wireRemoteButtons() {
       const key = btn.dataset.key;
       const ip = getActiveIp();
       if (!ip) return showToast("Select a device first", "error");
+      if (btn.disabled) return;
       try {
         await postOk("/api/keypress", { ip, key });
-        showToast(key);
         btn.classList.add("is-pressed");
         window.setTimeout(() => btn.classList.remove("is-pressed"), 160);
       } catch (err) {
@@ -162,6 +181,11 @@ function wireRemoteHoldRepeat() {
     if (btn.dataset.holdWired === "1") return;
     btn.dataset.holdWired = "1";
     let interval = null;
+
+    const stop = () => {
+      if (interval) window.clearInterval(interval);
+      interval = null;
+    };
 
     const start = async () => {
       if (btn.disabled) return;
@@ -185,11 +209,6 @@ function wireRemoteHoldRepeat() {
       }, 150);
     };
 
-    const stop = () => {
-      if (interval) window.clearInterval(interval);
-      interval = null;
-    };
-
     btn.addEventListener("pointerdown", (e) => {
       if (btn.disabled) return;
       if (e.button !== 0) return;
@@ -203,6 +222,65 @@ function wireRemoteHoldRepeat() {
   });
 }
 
+function wireRemoteKeyboardHijack() {
+  const btn = qs("#kbdToggle");
+  if (!btn) return;
+
+  const KEY = "zrocontrol.kbd_hijack";
+  let enabled = localStorage.getItem(KEY) === "1";
+  let handler = null;
+
+  const setUi = () => {
+    btn.textContent = enabled ? "On" : "Off";
+    btn.classList.toggle("cta", enabled);
+  };
+
+  const attach = () => {
+    if (handler) return;
+    handler = async (e) => {
+      if (!enabled) return;
+      if (isTypingTarget(e.target)) return;
+      const ip = getActiveIp();
+      if (!ip) return;
+      const map = {
+        ArrowUp: "Up",
+        ArrowDown: "Down",
+        ArrowLeft: "Left",
+        ArrowRight: "Right",
+        Enter: "Select",
+        Backspace: "Back",
+      };
+      const key = map[e.key];
+      if (!key) return;
+      e.preventDefault();
+      try {
+        await postOk("/api/keypress", { ip, key });
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    };
+    document.addEventListener("keydown", handler, { capture: true });
+  };
+
+  const detach = () => {
+    if (!handler) return;
+    document.removeEventListener("keydown", handler, { capture: true });
+    handler = null;
+  };
+
+  btn.addEventListener("click", () => {
+    enabled = !enabled;
+    localStorage.setItem(KEY, enabled ? "1" : "0");
+    if (enabled) attach();
+    else detach();
+    setUi();
+    showToast(enabled ? "Keyboard control on" : "Keyboard control off");
+  });
+
+  if (enabled) attach();
+  setUi();
+}
+
 function wireLaunchButtons() {
   qsa(".js-launch").forEach((btn) => {
     if (btn.dataset.wired === "1") return;
@@ -212,9 +290,9 @@ function wireLaunchButtons() {
       const appName = btn.dataset.appName || btn.textContent || "";
       const ip = getActiveIp();
       if (!ip) return showToast("Select a device first", "error");
+      if (btn.disabled) return;
       try {
         await postOk("/api/launch", { ip, app_id: appId, app_name: appName.trim() });
-        showToast("Launch");
         btn.classList.add("is-pressed");
         window.setTimeout(() => btn.classList.remove("is-pressed"), 180);
       } catch (err) {
@@ -236,7 +314,6 @@ function wireAppCardLaunch() {
       if (!ip) return showToast("Select a device first", "error");
       try {
         await postOk("/api/launch", { ip, app_id: appId, app_name: appName.trim() });
-        showToast("Launch");
         card.classList.add("is-pressed");
         window.setTimeout(() => card.classList.remove("is-pressed"), 180);
       } catch (err) {
@@ -250,7 +327,6 @@ function wireChannelSearch() {
   const input = qs("#channelSearch");
   const grid = qs("#channelGrid");
   if (!input || !grid) return;
-
   const cards = qsa(".app-card", grid);
   input.addEventListener("input", () => {
     const q = (input.value || "").trim().toLowerCase();
@@ -283,34 +359,32 @@ async function fetchLanDevices(timeoutS) {
 
 const _lanMissingCounts = new Map();
 
-function _cssEscape(s) {
-  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") return CSS.escape(s);
-  return String(s).replace(/"/g, '\\"');
+function deviceEl(ip) {
+  return qs(`.device-card[data-ip="${cssEscape(ip)}"]`);
 }
 
-function _deviceEl(ip) {
-  return qs(`.device-card[data-ip="${_cssEscape(ip)}"]`);
-}
-
-function _upsertDeviceCard(d) {
+function upsertDeviceCard(d) {
   const list = qs("#deviceList");
   if (!list) return;
   qs(".lan-empty", list)?.remove();
+  qsa(".skeleton", list).forEach((el) => el.remove());
+
   const ip = String(d.ip || "").trim();
   if (!ip) return;
-
   const name = String(d.name || "Roku");
   const model = String(d.model || "");
   const iconUrl = String(d.icon_url || "");
   const reachable = d.reachable !== false;
 
-  let el = _deviceEl(ip);
+  let el = deviceEl(ip);
   const active = getActiveIp() === ip;
   if (!el) {
-    const html = `
+    list.insertAdjacentHTML(
+      "beforeend",
+      `
       <div class="device-card${active ? " is-active" : ""}${reachable ? "" : " is-unreachable"}" data-ip="${escapeHtml(ip)}">
         <div class="device-ic" aria-hidden="true">
-          ${iconUrl ? `<img src="${escapeHtml(iconUrl)}" alt="" loading="lazy" onerror="this.remove()" />` : ""}
+          ${iconUrl ? `<img src="${escapeHtml(iconUrl)}" alt="" loading="lazy" />` : ""}
         </div>
         <div class="min-w-0">
           <div class="font-semibold truncate device-name">${escapeHtml(name)}</div>
@@ -321,11 +395,10 @@ function _upsertDeviceCard(d) {
             <a class="button" href="/remote?ip=${escapeHtml(ip)}">Remote</a>
           </div>
         </div>
-      </div>
-    `;
-    list.insertAdjacentHTML("beforeend", html);
-    el = _deviceEl(ip);
+      </div>`
+    );
     wireDeviceSelect();
+    el = deviceEl(ip);
   } else {
     el.classList.toggle("is-unreachable", !reachable);
     el.classList.remove("is-stale");
@@ -337,7 +410,7 @@ function _upsertDeviceCard(d) {
     if (iconUrl && !img) {
       qs(".device-ic", el)?.insertAdjacentHTML(
         "beforeend",
-        `<img src="${escapeHtml(iconUrl)}" alt="" loading="lazy" onerror="this.remove()" />`
+        `<img src="${escapeHtml(iconUrl)}" alt="" loading="lazy" />`
       );
     }
   }
@@ -345,7 +418,7 @@ function _upsertDeviceCard(d) {
   renderActiveDeviceHighlight();
 }
 
-function _markMissingDevices(seenIps) {
+function markMissingDevices(seenIps) {
   qsa(".device-card[data-ip]").forEach((el) => {
     const ip = el.dataset.ip || "";
     if (!ip || seenIps.has(ip)) return;
@@ -362,12 +435,24 @@ function _markMissingDevices(seenIps) {
 function startLanAutoRefresh() {
   const list = qs("#deviceList");
   if (!list) return;
-
   const timeoutS = list.dataset.timeout || "";
   const spinner = qs("#lanSpinner");
   const updated = qs("#lanUpdated");
   let inFlight = false;
   let lastMissing = false;
+
+  try {
+    const cached = JSON.parse(localStorage.getItem("zrocontrol.lan_cache_v1") || "null");
+    if (cached && Array.isArray(cached.devices) && Date.now() - (cached.ts || 0) < 5 * 60 * 1000) {
+      const seen = new Set();
+      cached.devices.forEach((d) => {
+        if (!d || !d.ip) return;
+        seen.add(String(d.ip));
+        upsertDeviceCard(d);
+      });
+      markMissingDevices(seen);
+    }
+  } catch {}
 
   const tick = async () => {
     if (inFlight) return;
@@ -380,16 +465,19 @@ function startLanAutoRefresh() {
         devices.forEach((d) => {
           if (!d || !d.ip) return;
           seen.add(String(d.ip));
-          _upsertDeviceCard(d);
+          upsertDeviceCard(d);
         });
       }
-      _markMissingDevices(seen);
+      markMissingDevices(seen);
+      try {
+        localStorage.setItem("zrocontrol.lan_cache_v1", JSON.stringify({ ts: Date.now(), devices }));
+      } catch {}
       const ip = getActiveIp();
       const found = !!ip && Array.isArray(devices) && devices.some((d) => (d.ip || "") === ip);
       if (ip && !found && !lastMissing) showToast(`Selected device offline: ${ip}`, "error");
       lastMissing = ip ? !found : false;
       if (updated) updated.textContent = new Date().toLocaleTimeString();
-    } catch (err) {
+    } catch {
       if (updated) updated.textContent = "error";
     } finally {
       spinner?.classList.add("hidden");
@@ -401,85 +489,6 @@ function startLanAutoRefresh() {
   window.setInterval(tick, 15000);
 }
 
-function wireKeyboardShortcuts() {
-  document.addEventListener("keydown", async (e) => {
-    if (isTypingTarget(e.target)) return;
-    const ip = getActiveIp();
-    if (!ip) return;
-
-    const keyMap = {
-      ArrowUp: "Up",
-      ArrowDown: "Down",
-      ArrowLeft: "Left",
-      ArrowRight: "Right",
-      Enter: "Select",
-      " ": "Play",
-      Escape: "Back",
-      Backspace: "Back",
-      Home: "Home",
-    };
-    const k = keyMap[e.key];
-    if (!k) return;
-    e.preventDefault();
-    try {
-      await postOk("/api/keypress", { ip, key: k });
-    } catch (err) {
-      showToast(err.message, "error");
-    }
-  });
-}
-
-async function fetchRecentChannels(ip) {
-  const u = new URL("/api/recent-channels", window.location.origin);
-  u.searchParams.set("ip", ip);
-  const res = await fetch(u, { cache: "no-store" });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || data.ok === false) throw new Error(data.error || `Request failed (${res.status})`);
-  return data.recent_channels || [];
-}
-
-function renderRecentStrip(recentChannels) {
-  const strip = qs("#recentStrip");
-  if (!strip) return;
-  const ip = getActiveIp();
-  const items = Array.isArray(recentChannels) ? recentChannels : [];
-  const buttons = items
-    .slice(0, 10)
-    .map((ch) => {
-      const id = escapeHtml(ch.id || "");
-      const name = escapeHtml(ch.name || ch.id || "");
-      const disabled = ip ? "" : "disabled";
-      return `<button class="button js-launch" data-app-id="${id}" data-app-name="${name}" ${disabled}>${name}</button>`;
-    })
-    .join("");
-  strip.innerHTML = `<div class="text-xs text-slate-400 uppercase tracking-widest">Recent</div>${buttons || '<div class="text-sm text-slate-300">No recent channels yet.</div>'}`;
-  wireLaunchButtons();
-}
-
-function startActiveAppPolling() {
-  const grid = qs("#channelGrid");
-  if (!grid) return;
-  const ip = getActiveIp();
-  if (!ip) return;
-
-  const tick = async () => {
-    try {
-      const u = new URL("/api/active-app", window.location.origin);
-      u.searchParams.set("ip", ip);
-      const res = await fetch(u, { cache: "no-store" });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data.ok === false) throw new Error(data.error || "active-app failed");
-      const recent = await fetchRecentChannels(ip);
-      renderRecentStrip(recent);
-    } catch (err) {
-      // ignore; device may be sleeping/offline
-    }
-  };
-
-  window.setTimeout(tick, 400);
-  window.setInterval(tick, 5000);
-}
-
 function fmtDuration(sec) {
   const s = Math.max(0, Math.floor(sec || 0));
   const h = Math.floor(s / 3600);
@@ -489,6 +498,15 @@ function fmtDuration(sec) {
   if (m > 0) return `${m}m ${ss}s`;
   return `${ss}s`;
 }
+
+function parseIsoLocal(s) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})$/.exec(String(s || ""));
+  if (!m) return null;
+  return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+}
+
+let userLiveTimer = null;
+let userLiveState = null;
 
 async function fetchUserData(ip, refresh = false) {
   const u = new URL("/api/user-data", window.location.origin);
@@ -506,40 +524,56 @@ function renderUser(data) {
   qs("#userUpdated") && (qs("#userUpdated").textContent = data.updated_ts || "—");
 
   const totals = data.totals || {};
-  qs("#statToday") && (qs("#statToday").textContent = fmtDuration(totals.today_sec));
-  qs("#statWeek") && (qs("#statWeek").textContent = fmtDuration(totals.week_sec));
-  qs("#statMonth") && (qs("#statMonth").textContent = fmtDuration(totals.month_sec));
-  qs("#statTotal") && (qs("#statTotal").textContent = fmtDuration(totals.total_watch_time_sec));
-
   const current = data.current;
-  qs("#currentApp") && (qs("#currentApp").textContent = current ? (current.channel_name || current.channel_id || "—") : "—");
+
+  qs("#currentApp") &&
+    (qs("#currentApp").textContent = current ? (current.channel_name || current.channel_id || "—") : "—");
   qs("#currentStart") && (qs("#currentStart").textContent = current ? (current.start_time || "—") : "—");
+
+  const start = current && current.start_time ? parseIsoLocal(current.start_time) : null;
+  const elapsedNow = start ? Math.max(0, Math.floor((Date.now() - start.getTime()) / 1000)) : 0;
+  const base = {
+    today: Math.max(0, Math.floor((totals.today_sec || 0) - elapsedNow)),
+    week: Math.max(0, Math.floor((totals.week_sec || 0) - elapsedNow)),
+    month: Math.max(0, Math.floor((totals.month_sec || 0) - elapsedNow)),
+    total: Math.max(0, Math.floor((totals.total_watch_time_sec || 0) - elapsedNow)),
+  };
+  userLiveState = { start, base };
+
+  const paint = () => {
+    const st = userLiveState?.start;
+    const b = userLiveState?.base;
+    const e = st ? Math.max(0, Math.floor((Date.now() - st.getTime()) / 1000)) : 0;
+    qs("#statToday") && (qs("#statToday").textContent = fmtDuration((b?.today || 0) + e));
+    qs("#statWeek") && (qs("#statWeek").textContent = fmtDuration((b?.week || 0) + e));
+    qs("#statMonth") && (qs("#statMonth").textContent = fmtDuration((b?.month || 0) + e));
+    qs("#statTotal") && (qs("#statTotal").textContent = fmtDuration((b?.total || 0) + e));
+  };
+  paint();
+  if (userLiveTimer) window.clearInterval(userLiveTimer);
+  userLiveTimer = window.setInterval(paint, 1000);
 
   const list = qs("#sessionList");
   if (!list) return;
   const sessions = Array.isArray(data.sessions) ? data.sessions : [];
   if (sessions.length === 0) {
-    list.innerHTML = '<div class="muted">No sessions yet. Leave Channels open so the dashboard can track active app changes.</div>';
+    list.innerHTML = '<div class="muted">No sessions yet.</div>';
     return;
   }
-  list.innerHTML = sessions.slice(0, 25).map((s) => {
-    const name = escapeHtml(s.channel_name || s.channel_id || "—");
-    const st = escapeHtml(s.start_time || "");
-    const et = escapeHtml(s.end_time || "");
-    const dur = fmtDuration(s.duration_sec || 0);
-    return `
-      <div class="kv">
-        <span>${name}</span>
-        <span class="text-right font-mono">${dur}</span>
-      </div>
-      <div class="kv">
-        <span>start</span><span class="text-right font-mono">${st || "—"}</span>
-      </div>
-      <div class="kv">
-        <span>end</span><span class="text-right font-mono">${et || "—"}</span>
-      </div>
-    `;
-  }).join("");
+  list.innerHTML = sessions
+    .slice(0, 20)
+    .map((s) => {
+      const name = escapeHtml(s.channel_name || s.channel_id || "—");
+      const st = escapeHtml(s.start_time || "");
+      const et = escapeHtml(s.end_time || "");
+      const dur = fmtDuration(s.duration_sec || 0);
+      return `
+        <div class="kv"><span>${name}</span><span class="text-right font-mono">${dur}</span></div>
+        <div class="kv"><span>start</span><span class="text-right font-mono">${st || "—"}</span></div>
+        <div class="kv"><span>end</span><span class="text-right font-mono">${et || "—"}</span></div>
+      `;
+    })
+    .join("");
 }
 
 function startUserPolling() {
@@ -569,22 +603,22 @@ function startUserPolling() {
 
   btn?.addEventListener("click", () => tick(true));
   window.setTimeout(() => tick(true), 250);
-  window.setInterval(() => tick(false), 15000);
+  window.setInterval(() => tick(true), 15000);
 }
 
 syncIpFromQuery();
+wirePageLoader();
 wireNavIpLinks();
 wireDeviceSelect();
 renderActiveDeviceHighlight();
 wireManualIp();
 wireRemoteButtons();
 wireRemoteHoldRepeat();
+wireRemoteKeyboardHijack();
 wireLaunchButtons();
 wireAppCardLaunch();
 wireChannelSearch();
 wireRefreshChannels();
 startLanAutoRefresh();
-wireKeyboardShortcuts();
-startActiveAppPolling();
 gateControlsByReachability();
 startUserPolling();

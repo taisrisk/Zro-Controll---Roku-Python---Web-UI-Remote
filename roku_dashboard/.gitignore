@@ -1,3 +1,6 @@
 .venv/
 __pycache__/
 data/devices/*.json
+data/sessions/*.json
+data/badges/*.svg
+data/sessions/*.json

@@ -125,3 +125,28 @@ class DeviceStore:
         if active_app and active_app.get("id"):
             self.bump_recent(ip, str(active_app.get("id")), t.cast(t.Optional[str], active_app.get("name")))
 
+    def list_known_devices(self) -> list[dict[str, t.Any]]:
+        devices: list[dict[str, t.Any]] = []
+        try:
+            paths = sorted(self.devices_dir.glob("*.json"), key=lambda p: p.name)
+        except Exception:
+            return devices
+        for p in paths:
+            try:
+                state = json.loads(p.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            ip = state.get("device_ip")
+            if not ip:
+                continue
+            devices.append(
+                {
+                    "ip": ip,
+                    "name": state.get("device_name"),
+                    "model": state.get("device_model"),
+                    "last_seen_ts": state.get("last_seen_ts"),
+                    "last_reachable_ts": state.get("last_reachable_ts"),
+                }
+            )
+        devices.sort(key=lambda d: (d.get("last_seen_ts") or "", d.get("ip") or ""), reverse=True)
+        return devices
