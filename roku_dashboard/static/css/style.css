@@ -26,14 +26,19 @@ body {
   height: 100%;
 }
 
+html {
+  background-color: #05050a;
+}
+
 body {
   min-height: 100dvh;
+  background-color: #05050a;
   background:
     radial-gradient(900px 420px at 18% 0%, rgba(255, 59, 212, 0.14), transparent 58%),
     radial-gradient(800px 420px at 80% 8%, rgba(120, 98, 255, 0.18), transparent 62%),
     linear-gradient(180deg, #07060b, #05050a);
   background-repeat: no-repeat;
-  background-size: cover;
+  background-attachment: fixed;
   color: var(--text);
 }
 

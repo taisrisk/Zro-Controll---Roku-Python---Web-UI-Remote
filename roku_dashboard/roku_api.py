@@ -46,7 +46,7 @@ def _safe_ip(ip: str) -> str:
 
 
 class Roku:
-    def __init__(self, ip: str, timeout_s: float = 3.0):
+    def __init__(self, ip: str, timeout_s: t.Union[float, tuple[float, float]] = 3.0):
         self.ip = _safe_ip(ip)
         self.base = f"http://{self.ip}:8060"
         self._timeout_s = timeout_s

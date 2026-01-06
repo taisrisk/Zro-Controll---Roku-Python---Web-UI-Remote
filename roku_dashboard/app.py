@@ -41,11 +41,11 @@ def create_app() -> Flask:
 
     @lru_cache(maxsize=64)
     def _roku(ip: str) -> Roku:
-        return Roku(ip, timeout_s=3.0)
+        return Roku(ip, timeout_s=(1.0, 5.0))
 
     @lru_cache(maxsize=64)
     def _roku_fast(ip: str) -> Roku:
-        return Roku(ip, timeout_s=1.5)
+        return Roku(ip, timeout_s=(0.6, 2.0))
 
     def _format_duration(sec: int) -> str:
         sec = max(0, int(sec))
@@ -282,7 +282,7 @@ def create_app() -> Flask:
         app_id = data.get("app_id", "")
         app_name = data.get("app_name", None)
         try:
-            _roku_fast(ip).launch_app(app_id)
+            _roku(ip).launch_app(app_id)
             store.bump_recent(ip, app_id, app_name)
         except (ValueError, RokuECPError) as exc:
             return jsonify({"ok": False, "error": str(exc)}), 400

@@ -285,7 +285,9 @@ function wireLaunchButtons() {
   qsa(".js-launch").forEach((btn) => {
     if (btn.dataset.wired === "1") return;
     btn.dataset.wired = "1";
-    btn.addEventListener("click", async () => {
+    btn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       const appId = btn.dataset.appId;
       const appName = btn.dataset.appName || btn.textContent || "";
       const ip = getActiveIp();
@@ -307,7 +309,8 @@ function wireAppCardLaunch() {
     if (card.dataset.wiredCard === "1") return;
     card.dataset.wiredCard = "1";
     card.addEventListener("click", async (e) => {
-      if (e.target.closest("button, a, input")) return;
+      const targetEl = e.target instanceof Element ? e.target : e.target?.parentElement;
+      if (targetEl && targetEl.closest("button, a, input")) return;
       const appId = card.dataset.id;
       const appName = card.dataset.appName || "";
       const ip = getActiveIp();
