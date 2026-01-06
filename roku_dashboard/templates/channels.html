@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% set title = "Channels" %}
+
+{% block content %}
+  <div class="grid gap-6">
+    <section class="panel panel-pad">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-semibold tracking-tight">Channels</h2>
+          <p class="mt-1 text-sm muted">
+            {% if ip %}
+              Device <span class="font-mono">{{ ip }}</span>
+              {% if active and active.name %} • Active: <span class="text-slate-200">{{ active.name }}</span>{% endif %}
+            {% else %}
+              Select a device first (LAN tab).
+            {% endif %}
+          </p>
+        </div>
+
+        <div class="flex flex-wrap gap-2 items-center">
+          <input id="channelSearch" class="input w-64" placeholder="Search channels…" />
+          <button class="button js-refresh-channels" {% if not ip %}disabled{% endif %}>Refresh</button>
+        </div>
+      </div>
+
+      {% if error %}
+        <div class="mt-4 alert">{{ error }}</div>
+      {% endif %}
+
+      <div id="recentStrip" class="mt-5 flex flex-wrap items-center gap-2">
+          <div class="text-xs muted2 uppercase tracking-widest">Recent</div>
+          {% if recent_channels and recent_channels|length > 0 %}
+            {% for ch in recent_channels %}
+              <button class="button js-launch" data-app-id="{{ ch.id }}" data-app-name="{{ ch.name }}" {% if not ip %}disabled{% endif %}>
+                {{ ch.name }}
+              </button>
+            {% endfor %}
+          {% else %}
+            <div class="text-sm muted">No recent channels yet.</div>
+          {% endif %}
+      </div>
+
+      <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" id="channelGrid" data-ip="{{ ip or '' }}">
+        {% for app in apps %}
+          <div class="app-card" data-name="{{ app.name|lower }}" data-id="{{ app.id }}" data-app-name="{{ app.name }}">
+            <div class="app-icon-wrap">
+              <img class="app-icon" src="{{ url_for('api_icon', app_id=app.id, ip=ip) }}" alt="" loading="lazy" />
+            </div>
+            <div class="min-w-0">
+              <div class="font-semibold truncate">{{ app.name }}</div>
+              <div class="text-xs muted font-mono truncate">id {{ app.id }}</div>
+            </div>
+            <button class="cta js-launch" data-app-id="{{ app.id }}" data-app-name="{{ app.name }}" {% if not ip %}disabled{% endif %}>Launch</button>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+{% endblock %}

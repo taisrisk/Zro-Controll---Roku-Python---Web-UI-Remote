@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{{ title or "ZroControl" }}</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  </head>
+  <body class="min-h-screen">
+    {% import "_icons.html" as icons %}
+
+    <main class="page max-w-6xl mx-auto px-4 py-6">
+      {% block content %}{% endblock %}
+    </main>
+
+    <nav class="bottom-nav" aria-label="Tabs">
+      <div class="bottom-nav-inner">
+        <a class="tab {% if request.endpoint == 'lan_control' %}is-active{% endif %}" href="{{ url_for('lan_control') }}">
+          {{ icons.icon_devices("tab-ic") }}
+          <span class="tab-tx">LAN</span>
+        </a>
+        <a class="tab js-nav-ip {% if request.endpoint == 'channels' %}is-active{% endif %}" data-path="{{ url_for('channels') }}" href="{{ url_for('channels') }}">
+          {{ icons.icon_grid("tab-ic") }}
+          <span class="tab-tx">Channels</span>
+        </a>
+        <a class="tab js-nav-ip {% if request.endpoint == 'remote' %}is-active{% endif %}" data-path="{{ url_for('remote') }}" href="{{ url_for('remote') }}">
+          {{ icons.icon_remote("tab-ic") }}
+          <span class="tab-tx">Remote</span>
+        </a>
+        <a class="tab js-nav-ip {% if request.endpoint == 'user_tab' %}is-active{% endif %}" data-path="{{ url_for('user_tab') }}" href="{{ url_for('user_tab') }}">
+          {{ icons.icon_user("tab-ic") }}
+          <span class="tab-tx">User</span>
+        </a>
+      </div>
+    </nav>
+
+    <div id="toast" class="toast hidden"></div>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  </body>
+</html>

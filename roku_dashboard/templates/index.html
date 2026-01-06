@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% set title = "Home" %}
+
+{% block content %}
+  <div class="grid gap-6 lg:grid-cols-3">
+    <section class="panel panel-pad lg:col-span-2">
+      <h1 class="text-2xl font-semibold tracking-tight">Pick a Roku</h1>
+      <p class="mt-2 muted leading-relaxed">Go to LAN, select a device, then use Channels / Remote.</p>
+      <div class="mt-6 flex flex-wrap gap-3">
+        <a class="cta" href="{{ url_for('lan_control') }}">Open LAN</a>
+        <a class="button" href="{{ url_for('channels') }}">Channels</a>
+        <a class="button" href="{{ url_for('remote') }}">Remote</a>
+      </div>
+    </section>
+
+    <aside class="panel panel-pad">
+      <div class="text-sm font-semibold">Manual IP</div>
+      <p class="mt-2 text-sm muted">If discovery fails, set the IP and the tabs will use it.</p>
+      <div class="mt-4 flex gap-2">
+        <input id="manualIp" class="input flex-1" placeholder="192.168.1.50" />
+        <button class="button" id="setIpBtn">Set</button>
+      </div>
+      <div class="mt-3 text-xs muted2">Saved in `localStorage`.</div>
+    </aside>
+  </div>
+{% endblock %}

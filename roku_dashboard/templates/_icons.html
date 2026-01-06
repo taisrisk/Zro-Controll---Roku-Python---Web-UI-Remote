@@ -1,0 +1,81 @@
+{% macro svg(attrs, body) -%}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" {{ attrs|safe }}>
+  {{ body|safe }}
+</svg>
+{%- endmacro %}
+
+{% macro icon_home(cls="") -%}
+  {{ svg('class="' ~ cls ~ '" aria-hidden="true"', '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 10v10h14V10"/>' ) }}
+{%- endmacro %}
+
+{% macro icon_back(cls="") -%}
+  {{ svg('class="' ~ cls ~ '" aria-hidden="true"', '<path d="M15 18l-6-6 6-6"/>' ) }}
+{%- endmacro %}
+
+{% macro icon_replay(cls="") -%}
+  {{ svg('class="' ~ cls ~ '" aria-hidden="true"', '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/>' ) }}
+{%- endmacro %}
+
+{% macro icon_star(cls="") -%}
+  {{ svg('class="' ~ cls ~ '" aria-hidden="true"', '<path d="M12 2.5 15 9l6.6.6-5 4.2 1.6 6.2L12 16.9 5.8 20l1.6-6.2-5-4.2L9 9z"/>' ) }}
+{%- endmacro %}
+
+{% macro icon_power(cls="") -%}
+  {{ svg('class="' ~ cls ~ '" aria-hidden="true"', '<path d="M12 2v10"/><path d="M7.5 4.5a8 8 0 1 0 9 0"/>' ) }}
+{%- endmacro %}
+
+{% macro icon_chevron_up(cls="") -%}
+  {{ svg('class="' ~ cls ~ '" aria-hidden="true"', '<path d="M6 14l6-6 6 6"/>' ) }}
+{%- endmacro %}
+
+{% macro icon_chevron_down(cls="") -%}
+  {{ svg('class="' ~ cls ~ '" aria-hidden="true"', '<path d="M6 10l6 6 6-6"/>' ) }}
+{%- endmacro %}
+
+{% macro icon_chevron_left(cls="") -%}
+  {{ svg('class="' ~ cls ~ '" aria-hidden="true"', '<path d="M14 6l-6 6 6 6"/>' ) }}
+{%- endmacro %}
+
+{% macro icon_chevron_right(cls="") -%}
+  {{ svg('class="' ~ cls ~ '" aria-hidden="true"', '<path d="M10 6l6 6-6 6"/>' ) }}
+{%- endmacro %}
+
+{% macro icon_play_pause(cls="") -%}
+  {{ svg('class="' ~ cls ~ '" aria-hidden="true"', '<path d="M7 5v14"/><path d="M17 5v14"/><path d="M10 8l10 4-10 4z"/>' ) }}
+{%- endmacro %}
+
+{% macro icon_rev(cls="") -%}
+  {{ svg('class="' ~ cls ~ '" aria-hidden="true"', '<path d="M11 7 3 12l8 5V7z"/><path d="M21 7 13 12l8 5V7z"/>' ) }}
+{%- endmacro %}
+
+{% macro icon_fwd(cls="") -%}
+  {{ svg('class="' ~ cls ~ '" aria-hidden="true"', '<path d="M13 7 21 12l-8 5V7z"/><path d="M3 7 11 12l-8 5V7z"/>' ) }}
+{%- endmacro %}
+
+{% macro icon_volume_up(cls="") -%}
+  {{ svg('class="' ~ cls ~ '" aria-hidden="true"', '<path d="M11 5 6.5 9H3v6h3.5L11 19z"/><path d="M15 9a4 4 0 0 1 0 6"/><path d="M17.5 7a7 7 0 0 1 0 10"/>' ) }}
+{%- endmacro %}
+
+{% macro icon_volume_down(cls="") -%}
+  {{ svg('class="' ~ cls ~ '" aria-hidden="true"', '<path d="M11 5 6.5 9H3v6h3.5L11 19z"/><path d="M15 9a4 4 0 0 1 0 6"/>' ) }}
+{%- endmacro %}
+
+{% macro icon_mute(cls="") -%}
+  {{ svg('class="' ~ cls ~ '" aria-hidden="true"', '<path d="M11 5 6.5 9H3v6h3.5L11 19z"/><path d="M16 9l5 6"/><path d="M21 9l-5 6"/>' ) }}
+{%- endmacro %}
+
+{% macro icon_devices(cls="") -%}
+  {{ svg('class="' ~ cls ~ '" aria-hidden="true"', '<rect x="3" y="4" width="14" height="14" rx="2"/><path d="M7 20h10"/><path d="M17 8h4v10h-4"/>' ) }}
+{%- endmacro %}
+
+{% macro icon_grid(cls="") -%}
+  {{ svg('class="' ~ cls ~ '" aria-hidden="true"', '<rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/>' ) }}
+{%- endmacro %}
+
+{% macro icon_remote(cls="") -%}
+  {{ svg('class="' ~ cls ~ '" aria-hidden="true"', '<rect x="7" y="2.5" width="10" height="19" rx="5"/><path d="M10 7.5h4"/><path d="M10 12.5h4"/><path d="M10 17.5h4"/>' ) }}
+{%- endmacro %}
+
+{% macro icon_user(cls="") -%}
+  {{ svg('class="' ~ cls ~ '" aria-hidden="true"', '<path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="8" r="4"/>' ) }}
+{%- endmacro %}

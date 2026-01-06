@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% set title = "LAN" %}
+
+{% block content %}
+  <div class="panel panel-pad">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h2 class="text-xl font-semibold tracking-tight">Devices</h2>
+        <div class="mt-2 flex items-center gap-2 text-xs muted2">
+          <div id="lanSpinner" class="spinner hidden" aria-hidden="true"></div>
+          <div>Auto-scan every 15s • <span id="lanUpdated">never</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="deviceList" class="mt-6 lan-grid" data-timeout="{{ timeout_s }}">
+      {% if devices|length == 0 %}
+        <div class="muted lan-empty">No devices found yet. Scanning…</div>
+      {% endif %}
+      {% for d in devices %}
+        {% set reachable = (d.name or d.model_name or d.model_number or d.serial_number or d.udn) %}
+        <div class="device-card{% if not reachable %} is-unreachable{% endif %}" data-ip="{{ d.ip }}">
+          <div class="device-ic" aria-hidden="true">
+            <img
+              src="{{ url_for('api_device_icon', ip=d.ip) }}"
+              alt=""
+              loading="lazy"
+              onerror="this.remove()"
+            />
+          </div>
+          <div class="min-w-0">
+            <div class="font-semibold truncate device-name">{{ d.name or "Roku" }}</div>
+            <div class="text-xs muted font-mono truncate device-meta">
+              {{ d.ip }}{% if d.model_name %} • {{ d.model_name }}{% endif %}{% if d.model_number %} ({{ d.model_number }}){% endif %}
+            </div>
+            <div class="device-actions">
+              <button class="cta js-select-device" data-ip="{{ d.ip }}">Select</button>
+              <a class="button" href="{{ url_for('channels', ip=d.ip) }}">Channels</a>
+              <a class="button" href="{{ url_for('remote', ip=d.ip) }}">Remote</a>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}

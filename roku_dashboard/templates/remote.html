@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% set title = "Remote" %}
+
+{% block content %}
+  {% import "_icons.html" as icons %}
+  <div class="grid gap-6 lg:grid-cols-3">
+    <section class="panel panel-pad lg:col-span-2">
+      <div class="remote-shell">
+        <div class="remote-body">
+          <div class="remote-top">
+            <button class="remote-btn press-flash js-send" data-key="Home" {% if not ip %}disabled{% endif %} title="Home">
+              {{ icons.icon_home("remote-ic") }}
+            </button>
+            <button class="remote-btn press-flash js-send" data-key="Back" {% if not ip %}disabled{% endif %} title="Back">
+              {{ icons.icon_back("remote-ic") }}
+            </button>
+            <button class="remote-btn press-flash js-send" data-key="InstantReplay" {% if not ip %}disabled{% endif %} title="Replay">
+              {{ icons.icon_replay("remote-ic") }}
+            </button>
+            <button class="remote-btn press-flash js-send" data-key="Info" {% if not ip %}disabled{% endif %} title="Options">
+              {{ icons.icon_star("remote-ic") }}
+            </button>
+          </div>
+
+      {% if error %}
+        <div class="mt-4 alert">{{ error }}</div>
+      {% endif %}
+
+          <div class="dpad">
+            <div></div>
+            <button class="remote-btn press-flash js-send" data-key="Up" data-hold="1" {% if not ip %}disabled{% endif %} title="Up">
+              {{ icons.icon_chevron_up("remote-ic") }}
+            </button>
+            <div></div>
+
+            <button class="remote-btn press-flash js-send" data-key="Left" data-hold="1" {% if not ip %}disabled{% endif %} title="Left">
+              {{ icons.icon_chevron_left("remote-ic") }}
+            </button>
+            <button class="remote-btn press-flash primary ok js-send" data-key="Select" {% if not ip %}disabled{% endif %} title="OK">OK</button>
+            <button class="remote-btn press-flash js-send" data-key="Right" data-hold="1" {% if not ip %}disabled{% endif %} title="Right">
+              {{ icons.icon_chevron_right("remote-ic") }}
+            </button>
+
+            <div></div>
+            <button class="remote-btn press-flash js-send" data-key="Down" data-hold="1" {% if not ip %}disabled{% endif %} title="Down">
+              {{ icons.icon_chevron_down("remote-ic") }}
+            </button>
+            <div></div>
+          </div>
+
+          <div class="media">
+            <button class="remote-btn press-flash round js-send" data-key="Rev" {% if not ip %}disabled{% endif %} title="Rewind">
+              {{ icons.icon_rev("remote-ic") }}
+            </button>
+            <button class="remote-btn press-flash round js-send" data-key="Play" {% if not ip %}disabled{% endif %} title="Play/Pause">
+              {{ icons.icon_play_pause("remote-ic") }}
+            </button>
+            <button class="remote-btn press-flash round js-send" data-key="Fwd" {% if not ip %}disabled{% endif %} title="Forward">
+              {{ icons.icon_fwd("remote-ic") }}
+            </button>
+          </div>
+
+          <div class="volume">
+            <button class="remote-btn press-flash round js-send" data-key="VolumeDown" {% if not ip %}disabled{% endif %} title="Volume Down">
+              {{ icons.icon_volume_down("remote-ic") }}
+            </button>
+            <button class="remote-btn press-flash round js-send" data-key="VolumeMute" {% if not ip %}disabled{% endif %} title="Mute">
+              {{ icons.icon_mute("remote-ic") }}
+            </button>
+            <button class="remote-btn press-flash round js-send" data-key="VolumeUp" {% if not ip %}disabled{% endif %} title="Volume Up">
+              {{ icons.icon_volume_up("remote-ic") }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel panel-pad">
+      <div class="text-sm font-semibold">Device</div>
+      {% if info %}
+        <div class="mt-3 space-y-2 text-sm">
+          <div class="kv"><span>name</span><span class="truncate text-right">{{ info.name or "-" }}</span></div>
+          <div class="kv"><span>model</span><span class="truncate text-right">{{ info.model_name or "-" }}</span></div>
+          <div class="kv"><span>model #</span><span class="truncate text-right font-mono">{{ info.model_number or "-" }}</span></div>
+          <div class="kv"><span>serial</span><span class="truncate text-right font-mono">{{ info.serial_number or "-" }}</span></div>
+        </div>
+      {% else %}
+        <div class="mt-3 text-sm muted">Pick a device in LAN.</div>
+      {% endif %}
+    </aside>
+  </div>
+{% endblock %}
